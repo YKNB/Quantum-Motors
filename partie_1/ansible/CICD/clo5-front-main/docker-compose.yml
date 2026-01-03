@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  frontend:
+    image: 172.16.237.47:5000/clo5-front:v1
+    container_name: clo5-front
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://172.16.237.47:3000 # Lien vers ton backend
+    ports:
+      - "4200:4200" # Mapping du port pour l'accès au frontend
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+    depends_on:
+      - backend

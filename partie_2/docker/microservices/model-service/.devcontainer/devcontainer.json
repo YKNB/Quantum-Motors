@@ -1,0 +1,17 @@
+{
+    "name": "Clo5",
+    "dockerComposeFile": "./docker-compose.yml",
+    "service": "backend",
+    "workspaceFolder": "/workspaces/quantum-motors/",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.vscode-node-azure-pack",
+                "dbaeumer.vscode-eslint"
+            ]
+        }
+    },
+    "shutdownAction": "stopCompose",
+    "remoteUser": "1000"
+}

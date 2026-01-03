@@ -1,0 +1,92 @@
+stages:
+  - test
+  - build
+  - deploy-preprod
+  - tests-preprod
+  - deploy-prod
+  - tests-prod
+
+run-tests:
+ stage: test
+ image: node:20-alpine3.18
+ before_script:
+   #- apt get update
+   - yarn install
+ script:
+   - yarn lint 
+
+build_image:
+  stage: build
+  image: docker:latest
+  variables:
+    IMAGE_NAME: localhost:5000/clo5-front
+    IMAGE_TAG: v2.0
+    RUNNER_SCRIPT_TIMEOUT: 20m
+    RUNNER_AFTER_SCRIPT_TIMEOUT: 15m
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG --build-arg BUILDKIT_INLINE_CACHE=1 .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+
+deploy-preprod:
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: djella_m
+    PASSWORD: menad
+    HOST: 172.16.237.88
+    IMAGE_NAME: 172.16.237.45:5000/clo5-front
+    IMAGE_TAG: v2.0
+  stage: deploy-preprod
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker stop clo5-front || true &&
+        sudo docker rm clo5-front || true &&
+        sudo docker run --name clo5-front -d -p 4200:4200 $IMAGE_NAME:$IMAGE_TAG "
+
+tests-preprod:
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: djella_m
+    PASSWORD: menad
+    HOST: 172.16.237.88
+  stage: tests-preprod
+  image: linuxserver/openssh-server
+  extends:
+    - deploy-preprod
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker exec -w /app clo5-front yarn lint"
+
+deploy-prod:
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: djella_m
+    PASSWORD: menad
+    HOST: 172.16.237.146
+    IMAGE_NAME: 172.16.237.45:5000/clo5-front
+    IMAGE_TAG: v2.0
+  stage: deploy-prod
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker stop clo5-front || true &&
+        sudo docker rm clo5-front || true &&
+        sudo docker run --name clo5-front -d -p 4200:4200 $IMAGE_NAME:$IMAGE_TAG "
+
+tests-prod:
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: djella_m
+    PASSWORD: menad
+    HOST: 172.16.237.146
+  stage: tests-prod
+  image: linuxserver/openssh-server
+  extends:
+    - deploy-prod
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker exec -w /app clo5-front yarn lint"

@@ -1,0 +1,47 @@
+version: '3.9'
+
+# networks:
+#   custom_network:
+#     driver: bridge
+
+services:
+  backend:
+    build: ./docker
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    volumes:
+      - ..:/workspaces/quantum-motors
+    command: sleep infinity
+    working_dir: /workspaces/quantum-motors
+    # networks:
+    #   - custom_network
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: user
+      MYSQL_DATABASE: quantum-motors
+      MYSQL_USER: user
+      MYSQL_PASSWORD: P@ssw0rd!
+    volumes:
+      - ./sql-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    # networks:
+    #   - custom_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: P@ssw0rd!
+    ports:
+      - "8080:80"
+    # networks:
+    #   - custom_network

@@ -1,0 +1,18 @@
+version: 0.1
+log:
+    fields:
+        service: registry
+    http:
+        addr: ":5000"
+        secret: asecretforlocalsigning
+        secret: asecretforremotesigning
+    health:
+        storagedriver:
+            enabled: true
+            interval: 10s
+            threshold: 3
+    health:
+        storagedriver:
+            enabled: true
+            interval: 10s
+            threshold: 3

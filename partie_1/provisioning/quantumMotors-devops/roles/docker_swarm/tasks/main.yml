@@ -1,0 +1,47 @@
+# - name: Check if the node is already part of a swarm
+#   command: docker info --format '{{.Swarm.LocalNodeState}}'
+#   register: swarm_status
+
+# - name: Initialize Docker Swarm
+#   command: docker swarm init
+#   register: swarm_init_result
+#   when: swarm_status.stdout != 'active'
+
+# - name: Get the join token for workers
+#   command: docker swarm join-token -q worker
+#   register: worker_token
+#   when: swarm_status.stdout == 'active' or swarm_init_result is succeeded
+
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - software-properties-common
+    state: present
+    update_cache: yes
+
+- name: Add Docker's official GPG key
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/debian bookworm stable"
+    state: present
+    update_cache: yes
+
+- name: Install Docker
+  apt:
+    name: docker-ce
+    state: present
+    update_cache: yes
+
+- name: Enable and start Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes

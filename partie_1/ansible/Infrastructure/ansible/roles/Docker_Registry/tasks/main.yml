@@ -1,0 +1,54 @@
+# ---
+# - name: Install Docker Registry
+#   apt:
+#     name: docker-registry
+#     state: present
+
+# - name: Create a Docker Registry configuration file
+#   template:
+#     src: registry_config.yml.j2
+#     dest: /etc/docker/registry/config.yml
+#   notify:
+#     - Restart Docker Registry
+
+# - name: Run Docker Registry container
+#   docker_container:
+#     name: registry
+#     image: registry:2
+#     state: started
+#     restart_policy: always
+#     ports:
+#       - "5000:5000"
+#     volumes:
+#       - /var/lib/registry:/var/lib/registry
+#     env:
+#       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+
+# - name: Remove existing SonarQube container if it exists
+#   docker_container:
+#     name: sonarqube
+#     state: absent
+
+# - name: Run SonarQube container
+#   docker_container:
+#     name: sonarqube
+#     image: sonarqube:latest
+#     state: started
+#     restart_policy: always
+#     ports:
+#       - "9000:9000"
+#     volumes:
+#       - /opt/sonarqube:/opt/sonarqube
+
+- name: Install Docker Registry container
+  docker_container:
+    name: registry
+    image: registry:2
+    state: started
+    restart_policy: always
+    ports:
+      - "5001:5000"
+    timeout: 120
+    volumes:
+      - /var/lib/registry:/var/lib/registry
+

@@ -1,0 +1,41 @@
+---
+- block:
+    - name: Installer les dépendances
+      ansible.builtin.apt:
+        name:
+          - curl
+          - sudo
+        update_cache: true
+
+    - name: Ajouter le dépôt GitLab Runner
+      ansible.builtin.apt_key:
+        url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+        state: present
+
+    - name: Ajouter le repository de GitLab Runner
+      ansible.builtin.apt_repository:
+        repo: >
+          deb https://packages.gitlab.com/runner/gitlab-runner/ubuntu/
+          focal main
+        state: present
+
+    - name: Installer GitLab Runner
+      ansible.builtin.apt:
+        name: gitlab-runner
+        state: present
+
+    - name: Enregistrer le GitLab Runner
+      shell: |
+        gitlab-runner register \
+          --non-interactive \
+          --url "{{ gitlab_url }}" \
+          --registration-token "{{ gitlab_runner_registration_token }}" \
+          --executor "docker" \
+          --docker-image "docker:latest" \
+          --description "My GitLab Runner" \
+          --tag-list "docker,aws" \
+          --run-untagged="true" \
+          --locked="false" \
+          --access-level="not_protected"
+      args:
+        creates: /etc/gitlab-runner/config.toml

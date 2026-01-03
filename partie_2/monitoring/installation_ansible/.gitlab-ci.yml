@@ -1,0 +1,60 @@
+---
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  script:
+    - echo "Exécution des tests unitaires"
+    - pytest
+  tags:
+    - docker
+
+build:
+  stage: build
+  script:
+    - docker build -t my-app:$CI_COMMIT_SHA .
+    - docker push my-app:$CI_COMMIT_SHA
+  tags:
+    - docker
+  only:
+    - master
+
+deploy_preprod:
+  stage: deploy
+  script:
+    - echo "Déploiement en préprod"
+    - ansible-playbook -i inventory preprod.yml
+  environment:
+    name: preprod
+  only:
+    - master
+
+tests_functionnels_preprod:
+  stage: test
+  script:
+    - echo "Tests fonctionnels en préprod"
+  only:
+    - master
+
+deploy_prod_green:
+  stage: deploy
+  script:
+    - echo "Déploiement en green"
+    - ansible-playbook -i inventory prod_green.yml
+  environment:
+    name: prod-green
+  only:
+    - master
+
+switch_to_green:
+  stage: deploy
+  script:
+    - echo "Bascule vers l'environnement green"
+  when: manual
+  environment:
+    name: production
+  only:
+    - master

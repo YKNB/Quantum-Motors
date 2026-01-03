@@ -1,0 +1,51 @@
+---
+# Installer les dépendances GitLab
+- name: Installer les dépendances nécessaires pour GitLab
+  apt:
+    name:
+      - curl
+      - openssh-server
+      - ca-certificates
+      - tzdata
+      - postfix
+    state: present
+    update_cache: true
+
+# Ajouter le dépôt GitLab
+- name: Ajouter le dépôt GitLab
+  apt_repository:
+    repo: 'deb https://packages.gitlab.com/gitlab/gitlab-ce/ubuntu/ focal main'
+    state: present
+    filename: 'gitlab_gitlab-ce.list'
+    update_cache: true
+
+
+# Vérifier si un autre processus apt-get est en cours d'exécution
+- name: Vérifier si apt-get est en cours d'exécution
+  shell: ps aux | grep apt
+  register: apt_process_check
+
+- name: Forcer l'arrêt de apt-get s'il est en cours d'exécution
+  shell: killall -9 apt apt-get
+  when: apt_process_check.stdout.find('apt-get') != -1
+
+# Nettoyer les verrous dpkg si nécessaire
+- name: Supprimer le verrou dpkg si nécessaire
+  file:
+    path: /var/lib/dpkg/lock-frontend
+    state: absent
+
+- name: Supprimer le verrou dpkg backend si nécessaire
+  file:
+    path: /var/lib/dpkg/lock
+    state: absent
+
+# Configurer GitLab CE
+- name: Installer GitLab CE
+  apt:
+    name: gitlab-ce
+    state: present
+
+# Reconfigurer GitLab
+- name: Reconfigurer GitLab
+  command: gitlab-ctl reconfigure

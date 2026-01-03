@@ -1,0 +1,93 @@
+---
+stages:
+  - test
+  - build
+  - deploy-preprod
+  - tests-preprod
+  - deploy-prod
+  - tests-prod
+
+# Étape de tests
+run-tests:
+  stage: test
+  image: node:20-alpine3.18
+  before_script:
+    - yarn install
+  script:
+    - yarn lint
+    - yarn test
+
+# Étape de build de l'image Docker
+build_image:
+  stage: build
+  image: docker:26.0.0-rc1-cli
+  variables:
+    IMAGE_NAME: 172.16.237.47:5000/clo5-back  # Met à jour le registry avec l'adresse IP du manager
+    IMAGE_TAG: v4.0
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+    - docker push $IMAGE_NAME:$IMAGE_TAG
+
+# Déploiement sur l'environnement de préproduction
+deploy-preprod:
+  stage: deploy-preprod
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: student
+    PASSWORD: zjM22tymSROP
+    HOST: 172.16.237.12  # Ici, on déploie sur VM1, qui est un worker
+    IMAGE_NAME: 172.16.237.47:5000/clo5-back
+    IMAGE_TAG: v4.0
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD scp -o StrictHostKeyChecking=no docker-compose.yml $USER@$HOST:/home/student/docker-compose.yml
+    - sshpass -p $PASSWORD scp -o StrictHostKeyChecking=no quantum-motors-initial.sql $USER@$HOST:/home/student/sql-scripts/
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker stack deploy -c docker-compose.yml clo5-back-stack"
+
+# Tests sur l'environnement de préproduction
+tests-preprod:
+  stage: tests-preprod
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: student
+    PASSWORD: zjM22tymSROP
+    HOST: 172.16.237.12  # Par exemple, le worker où l'application est déployée en preprod
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker exec -w /app clo5-back yarn test"
+
+# Déploiement sur l'environnement de production
+deploy-prod:
+  stage: deploy-prod
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: student
+    PASSWORD: RlnneaSQBCaT  # Mot de passe du second worker
+    HOST: 172.16.237.21  # Ici on déploie sur VM2, qui est un worker en prod
+    IMAGE_NAME: 172.16.237.47:5000/clo5-back
+    IMAGE_TAG: v4.0
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD scp -o StrictHostKeyChecking=no docker-compose.yml $USER@$HOST:/home/student/docker-compose.yml
+    - sshpass -p $PASSWORD scp -o StrictHostKeyChecking=no quantum-motors-initial.sql $USER@$HOST:/home/student/quantum-motors-initial.sql
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker stack deploy -c docker-compose.yml clo5-back-stack"
+
+# Tests sur l'environnement de production
+tests-prod:
+  stage: tests-prod
+  before_script:
+    - apk update && apk add sshpass
+  variables:
+    USER: student
+    PASSWORD: RlnneaSQBCaT
+    HOST: 172.16.237.21  # VM2 en production
+  image: linuxserver/openssh-server
+  script:
+    - sshpass -p $PASSWORD ssh -o StrictHostKeyChecking=no $USER@$HOST "
+        sudo docker exec -w /app clo5-back yarn test"

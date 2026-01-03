@@ -1,0 +1,2 @@
+# sonar_version: "10.6.0.60073"
+# sonar_download_url: "https://binaries.sonarsource.com/Distribution/sonarqube/{{ sonar_version }}/sonarqube-{{ sonar_version }}-linux.zip"

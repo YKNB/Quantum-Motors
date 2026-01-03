@@ -1,0 +1,3 @@
+---
+gitlab_url: "http://172.16.237.31/" # URL de votre GitLab
+gitlab_runner_token: "TOKEN_D_ENREGISTREMENT"  # À obtenir via GitLab -> Admin -> Runners

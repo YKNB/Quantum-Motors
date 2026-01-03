@@ -1,0 +1,11 @@
+# Fichier de configuration GitLab
+
+external_url 'http://{{ ansible_hostname }}'
+
+gitlab_rails['gitlab_email_from'] = 'gitlab@{{ ansible_hostname }}'
+gitlab_rails['gitlab_host'] = '{{ ansible_hostname }}'
+gitlab_rails['gitlab_port'] = 80
+gitlab_rails['gitlab_https'] = false
+
+# Configuration de l'envoi de mails
+gitlab_rails['smtp_enable'] = false

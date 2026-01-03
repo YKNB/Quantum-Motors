@@ -1,0 +1,14 @@
+---
+- name: Create GitLab administrators
+  gitlab_user:
+    username: "{{ item.username }}"
+    email: "{{ item.email }}"
+    password: "P@SSW0RD"
+    name: "{{ item.name }}"
+    confirm: true
+    provider: "gitlab"
+    state: present
+    admin: true
+  loop:
+    - { username: 'professor1', email: 'prof1@example.com', name: 'Professor One' }
+    - { username: 'professor2', email: 'prof2@example.com', name: 'Professor Two' }

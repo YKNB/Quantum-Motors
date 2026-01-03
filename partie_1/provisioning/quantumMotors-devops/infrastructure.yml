@@ -1,0 +1,63 @@
+
+- name: Set up Docker Swarm Cluster (Managers)
+  hosts: swarm_managers
+  become: yes
+  tasks:
+    - name: Gather Docker info
+      command: docker info
+      register: docker_swarm_info
+      when: inventory_hostname == groups['swarm_managers'][0]
+
+    - name: Ensure Docker Swarm is initialized
+      command: docker swarm init
+      when: >
+        inventory_hostname == groups['swarm_managers'][0] and
+        (docker_swarm_info is not defined or 'Swarm: active' not in docker_swarm_info.stdout)
+
+
+    - name: Install Docker (if not installed)
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+- name: Set up Docker Swarm Cluster (Workers)
+  hosts: swarm_workers
+  become: yes
+  tasks:
+    - name: Check if Docker Swarm is active
+      command: docker info
+      register: docker_info
+      ignore_errors: true  # This allows the playbook to continue even if the command fails
+
+    - name: Get the join token from the manager
+      command: docker swarm join-token -q worker
+      register: swarm_join_token
+      delegate_to: "{{ groups['swarm_managers'][0] }}"  # Use the first manager directly
+      changed_when: false  # Prevent marking the task as changed when running
+      when: >
+        docker_info is not defined or 'Swarm: active' not in docker_info.stdout
+
+    - name: Join the worker to the swarm
+      command: docker swarm join --token {{ swarm_join_token.stdout }} {{ hostvars[groups['swarm_managers'][0]].ansible_host }}:2377
+      when: >
+        swarm_join_token.stdout is defined and 
+        (docker_info is not defined or 'Swarm: active' not in docker_info.stdout)
+
+- name: Deploy SonarQube
+  hosts: swarm_managers
+  become: yes
+  roles:
+    - SonarQube
+
+- name: Deploy GitLab
+  hosts: VM4
+  become: yes
+  roles:
+    - install_gitlab
+    - users_gitlab

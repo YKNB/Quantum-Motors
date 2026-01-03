@@ -1,0 +1,76 @@
+# 1. Ajouter des utilisateurs avec des privilèges sudo
+- name: Ajouter des utilisateurs avec des privilèges sudo
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    password: "{{ item.password | password_hash('sha512') }}"
+    groups: sudo
+    append: yes
+    shell: /bin/bash
+    state: present
+  loop:
+    - { username: "rinaz_a", password: "P@SSW0RD" }
+    - { username: "rafina_d", password: "P@SSW0RD" }
+  tags:
+    - add_sudo_users
+
+# 2. Vérifier si l'utilisateur GitLab existe déjà
+- name: Vérifier si l'utilisateur GitLab existe déjà
+  shell: |
+      gitlab-rails runner "User.exists?(email: '{{ item.email }}')"
+  register: user_exists
+  loop:
+      - { email: 'rinaz_a@etna-alternance.net' }
+      - { email: 'rinaz_b@etna-alternance.net' }
+  ignore_errors: true
+  changed_when: false
+  args:
+    executable: /bin/bash
+
+# 3. Ajouter ou mettre à jour les utilisateurs GitLab
+- name: Ajouter ou mettre à jour les utilisateurs GitLab
+  shell: |
+      gitlab-rails runner "user = User.find_or_initialize_by(email: '{{ item.email }}'); user.update!(username: '{{ item.username }}', password: '{{ item.password }}', password_confirmation: '{{ item.password }}', name: '{{ item.name }}', namespace: Namespace.find(1))"
+  loop:
+      - { username: 'rinaz_a', email: 'rinaz_a@etna-alternance.net', password: 'P@SSW0RD', name: 'Rinaz A' }
+      - { username: 'rinaz_b', email: 'rinaz_b@etna-alternance.net', password: 'P@SSW0RD', name: 'Rinaz B' }
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+# 4. Valider automatiquement les comptes utilisateurs
+- name: Valider automatiquement les comptes utilisateurs
+  ansible.builtin.command: >
+    sudo gitlab-rails runner "User.where(email: '{{ item.email }}').each { |user| user.confirm }"
+  loop:
+    - { email: "rinaz_a@etna-alternance.net" }
+    - { email: "rafina_d@etna-alternance.net" }
+  args:
+    executable: /bin/bash
+  tags:
+    - auto_confirm_users
+
+# 5. Désactiver l'envoi de mails de confirmation de création de compte GitLab
+- name: Désactiver l'envoi de mails de confirmation de création de compte GitLab
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: '^gitlab_rails\[''send_confirmation_email''\]'
+    line: "gitlab_rails['send_confirmation_email'] = false"
+  notify: Reconfigurer GitLab
+  tags:
+    - disable_confirmation_email
+
+# 6. Configurer les domaines auto-confirmés pour les utilisateurs GitLab
+- name: Configurer les domaines auto-confirmés pour les utilisateurs GitLab
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: '^gitlab_rails\[''auto_confirmed_domains''\]'
+    line: "gitlab_rails['auto_confirmed_domains'] = ['172.16.237.31']"
+  notify: Reconfigurer GitLab
+  tags:
+    - set_auto_confirm_domains
+
+# 7. Reconfigurer GitLab pour appliquer les modifications
+- name: Reconfigurer GitLab
+  ansible.builtin.command: gitlab-ctl reconfigure
+  tags:
+    - reconfigure_gitlab

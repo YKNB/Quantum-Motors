@@ -1,0 +1,39 @@
+# - name: Install GitLab and create admin users
+#   hosts: VM3
+#   become: true
+#   tasks:
+#     - name: Installer GitLab
+#       include_role:
+#         name: roles/install_gitlab
+
+#     - name: Créer des utilisateurs administrateurs dans GitLab
+#       include_role:
+#         name: roles/users_gitlab
+
+#     - name: Déployer le GitLab Runner
+#       include_role:
+#         name: roles/deploy_gitlab_runner
+    
+#     - name: Install python-gitlab
+#       ansible.builtin.pip:
+#         name: python-gitlab
+#       become: true
+
+#     - name: Vérifier que python-gitlab est installé
+#       ansible.builtin.command: /usr/bin/python3 -m pip show python-gitlab
+#       register: result
+#       ignore_errors: true
+
+#     - name: Afficher les informations sur python-gitlab
+#       debug:
+#         var: result.stdout
+
+---
+- name: Install and configure GitLab on VM3
+  hosts: swarm_gitlab
+  become: true
+  vars:
+    gitlab_domain: "172.16.237.31"
+  roles:
+    - roles/install_gitlab
+    - roles/users_gitlab

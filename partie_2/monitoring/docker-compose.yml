@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - microservices_quantum-network
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+
+  mysql-exporter:
+    image: prom/mysqld-exporter
+    container_name: mysql-exporter
+    command: 
+      - --config.my-cnf=/cfg/.my.cnf
+      - --mysqld.address=mysql-back:3306
+    volumes:
+      - "./.my.cnf:/cfg/.my.cnf"
+    ports:
+      - 9104:9104
+    networks:
+      - microservices_quantum-network
+
+networks:
+  microservices_quantum-network:
+    external: true

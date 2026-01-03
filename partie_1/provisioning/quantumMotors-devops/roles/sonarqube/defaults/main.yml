@@ -1,0 +1,13 @@
+
+sonarqube_image: "sonarqube:10.6-community"
+sonarqube_port: "9000"
+
+# Environnement MySQL
+sonarqube_db_url: "jdbc:mysql://localhost:3306/quantum-motors?useSSL=false&serverTimezone=UTC"
+sonarqube_db_username: "user"
+sonarqube_db_password: ""
+
+# Volumes Docker
+sonarqube_data_volume: "sonar_data"
+sonarqube_bundled_plugins_volume: "sonar_bundled_plugins"
+sonarqube_logs_volume: "sonar_logs"

@@ -1,0 +1,51 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - software-properties-common
+    state: present
+    update_cache: true
+
+- name: Add Docker's official GPG key
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: >
+      deb [arch=amd64] https://download.docker.com/linux/debian bookworm stable
+    state: present
+    update_cache: true
+
+- name: Install Docker Engine
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: true
+
+- name: Enable and start Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add the user sadat_g to the docker group
+  ansible.builtin.user:
+    name: sadat_g
+    groups: docker
+    append: true
+
+- name: Add the user ansible to the docker group
+  ansible.builtin.user:
+    name: ansible
+    groups: docker
+    append: true

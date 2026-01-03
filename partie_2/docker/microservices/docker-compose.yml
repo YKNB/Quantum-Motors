@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"  # Port HTTP pour les requêtes vers les microservices
+      - "8080:8080"  # Port pour accéder au dashboard de Traefik
+    networks:
+      - quantum-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  db:
+    image: mysql:5.7
+    restart: always
+    container_name: mysql-back
+    environment:
+      MYSQL_ROOT_PASSWORD: P@ssw0rd!
+      MYSQL_DATABASE: quantum-motors
+      MYSQL_USER: user
+      MYSQL_PASSWORD: P@ssw0rd!
+    volumes:
+      - my-db:/var/lib/mysql
+      - ./quantum-motors-initial.sql:/docker-entrypoint-initdb.d/quantum-motors-initial.sql
+    networks:
+      - quantum-network
+
+  battery-service:
+    image: ticgpe/microservices-battery-service
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.battery.loadbalancer.server.port=3000"
+    depends_on:
+      - db
+
+  car-service:
+    image: ticgpe/microservices-car-service
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.car.loadbalancer.server.port=3000"
+    depends_on:
+      - db
+
+  color-service:
+    image: ticgpe/microservices-color-service
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.color.loadbalancer.server.port=3000"
+    depends_on:
+      - db
+
+  finish-service:
+    image: ticgpe/microservices-finish-service
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.finish.loadbalancer.server.port=3000"
+    depends_on:
+      - db
+
+  model-service:
+    image: ticgpe/microservices-model-service
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.model.loadbalancer.server.port=3000"
+    depends_on:
+      - db
+
+  gateway:
+    image: ticgpe/microservices-gateway
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=user
+      - DATABASE_PASSWORD=P@ssw0rd!
+      - DATABASE_NAME=quantum-motors
+    networks:
+      - quantum-network
+    ports:
+      - "8086:8080"
+    env_file:
+      - ./gateway-service/.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8080"
+    depends_on:
+      - db
+
+  frontend:
+    image: ticgpe/microservices-frontend  # Assure-toi que le Dockerfile pour le frontend est dans ce dossier
+    ports:
+      - "4200:4200"
+    networks:
+      - quantum-network
+    depends_on:
+      - gateway  # Le frontend dépend de la gateway
+    environment:
+      # Utilisez l'IP de la gateway, généralement "gateway" si dans le même réseau Docker
+      - NEXT_PUBLIC_API_URL=http://gateway:8080
+
+networks:
+  quantum-network:
+    driver: bridge
+
+volumes:
+  my-db:

@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`back.quantum.local`)" 
+
+  db:
+    image: mysql:5.7
+    restart: always
+    container_name: mysql-back
+    environment:
+      MYSQL_ROOT_PASSWORD: P@ssw0rd!
+      MYSQL_DATABASE: quantum-motors
+      MYSQL_USER: user
+      MYSQL_PASSWORD: P@ssw0rd!
+    volumes:
+      - my-db:/var/lib/mysql
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == manager
+
+  server:
+    image: 172.16.237.47:5000/clo5-back:v4.0  # Utilise l'IP du manager (VM4) pour le registry privé
+    restart: always
+    container_name: clo5-back
+    depends_on:
+      - db
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker  # Workers exécutent les services applicatifs
+    ports:
+      - "3000:3000"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    container_name: phpmyadmin-back
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: P@ssw0rd!
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+    ports:
+      - "8081:81"
+
+volumes:
+  my-db:

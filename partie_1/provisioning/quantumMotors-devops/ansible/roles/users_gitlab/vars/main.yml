@@ -1,0 +1,11 @@
+gitlab_api_token: "{{ lookup('env', 'GITLAB_API_TOKEN') }}"
+
+gitlab_admins:
+  - username: "rinaz_a"
+    email: "rinaz_a@etna-alternance.net"
+    password: "P@SSW0RD"
+    name: "Rinaz A"
+  - username: "rafina_d"
+    email: "rafina_d@etna-alternance.net"
+    password: "P@SSW0RD"
+    name: "Rafina D"

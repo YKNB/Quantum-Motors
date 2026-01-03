@@ -1,0 +1,81 @@
+---
+- name: Set up Docker Swarm Cluster (Managers)
+  hosts: swarm_managers
+  become: true
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Gather Docker info
+      command: docker info
+      register: docker_swarm_info
+      ignore_errors: true
+
+    - block:
+        - name: Initialize Docker Swarm
+          command: >
+            docker swarm init --advertise-addr={{
+              hostvars[inventory_hostname]['ansible_default_ipv4']['address']
+            }}:2377
+          when:
+            - inventory_hostname == groups['swarm_managers'][0]
+            - docker_swarm_info is not defined
+            - "'Swarm: active' not in docker_swarm_info.stdout"
+
+    - name: Get the Manager join-token
+      command: docker swarm join-token --quiet manager
+      register: manager_token
+      when: inventory_hostname == groups['swarm_managers'][0]
+
+
+- name: Set up Docker Swarm Cluster (Workers)
+  hosts: swarm_workers
+  become: true
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Check if Docker Swarm is active
+      command: docker info
+      register: docker_info
+      ignore_errors: true
+
+    - name: Get the join token from the manager
+      command: docker swarm join-token -q worker
+      register: swarm_join_token
+      delegate_to: "{{ groups['swarm_managers'][0] }}"
+      changed_when: false
+
+    - name: Join the worker to the swarm
+      command: >
+        docker swarm join --token {{ swarm_join_token.stdout }}
+        >
+        >
+        {{ hostvars[groups['swarm_managers'][0]]
+        .ansible_default_ipv4.address }}:2377
+      when:
+        - swarm_join_token.stdout is defined
+        - "'Swarm: active' not in docker_info.stdout"
+        - "'Swarm: inactive' in docker_info.stdout"
+
+- name: Deploy SonarQube
+  hosts: swarm_managers
+  become: true
+  roles:
+    - roles/SonarQube

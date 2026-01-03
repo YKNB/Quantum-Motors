@@ -1,0 +1,5 @@
+---
+- name: Restart SonarQube container
+  docker_container:
+    name: sonarqube
+    state: restarted

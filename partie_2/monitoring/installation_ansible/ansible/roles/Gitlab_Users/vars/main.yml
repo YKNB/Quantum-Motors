@@ -1,0 +1,2 @@
+---
+gitlab_api_token: "{{ lookup('env', 'GITLAB_API_TOKEN') }}"  # Token d'API GitLab

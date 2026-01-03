@@ -1,0 +1,57 @@
+# 1. Ajouter des utilisateurs avec des privilèges sudo
+- name: Ajouter des utilisateurs avec des privilèges sudo
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    password: "{{ item.password | password_hash('sha512') }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    state: present
+  loop:
+    - {username: "rinaz_a", password: 'P@SSW0RD'}
+    - {username: "rafina_d", password: 'P@SSW0RD'}
+  tags:
+    - add_sudo_users
+
+# 2. Vérifier si l'utilisateur GitLab existe déjà
+- name: Vérifier si l'utilisateur GitLab existe déjà
+  shell: |
+    sudo gitlab-rails runner "puts User.exists?(email: '{{ item.email }}')"
+  register: user_exists
+  loop:
+    - {email: 'rinaz_a@etna-alternance.net'}
+    - {email: 'rafina_d@etna-alternance.net'}
+  changed_when: false
+  args:
+    executable: /bin/bash
+
+# 3. Créer un utilisateur GitLab administrators s'il n'existe pas
+- name: Create GitLab administrators
+  gitlab_user:
+    username: "{{ item.username }}"
+    email: "{{ item.email }}"
+    password: "P@SSW0RD"
+    name: "{{ item.name }}"
+    confirm: true
+    provider: "gitlab"
+    state: present
+    admin: true
+  loop:
+    - username: "rinaz_a"
+      email: 'rinaz_a@etna-alternance.net'
+      name: 'rinaz A'
+    - username: "rafina_d"
+      email: 'rafina_d@etna-alternance.net'
+      name: 'rafina D'
+
+
+# 5. Désactiver l'envoi de mails de confirmation de création de compte GitLab
+- name: Désactiver l'envoi de mails de confirmation de création de compte GitLab
+  ansible.builtin.lineinfile:
+    path: /etc/gitlab/gitlab.rb
+    regexp: '^gitlab_rails\[''send_confirmation_email''\]'
+    line: "gitlab_rails['send_confirmation_email'] = false"
+    state: present
+  notify: Reconfigurer GitLab
+  tags:
+    - disable_confirmation_email
